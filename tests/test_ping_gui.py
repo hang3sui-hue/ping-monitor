@@ -27,6 +27,11 @@ class PingLogicTests(unittest.TestCase):
         self.assertEqual(ping_gui.parse_latency("回复: 时间<1ms TTL=128"), 0.5)
         self.assertIsNone(ping_gui.parse_latency("Request timed out."))
 
+    def test_no_reply_is_not_counted_as_success(self):
+        self.assertEqual(ping_gui.ping_result(0, "Destination host unreachable."), (False, None))
+        self.assertEqual(ping_gui.ping_result(1, "Reply: time=12ms TTL=128"), (False, None))
+        self.assertEqual(ping_gui.ping_result(0, "Reply: time=12ms TTL=128"), (True, 12))
+
     def test_last_target_is_saved_and_loaded(self):
         with TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as folder:
             path = Path(folder) / "settings.json"
