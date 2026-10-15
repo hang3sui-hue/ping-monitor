@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.venv/
+.idea/
+.vscode/
+*.csv
+/PingMonitor.exe
+ping-monitor-settings.json
+ping-monitor-settings.json.tmp
