@@ -101,6 +101,12 @@ def parse_latency(output):
     return 0.5 if match.group(1) == "<" and value == 1 else value
 
 
+def ping_result(returncode, output):
+    """只有命令成功且确实解析到回复，才算收到一个包。"""
+    latency = parse_latency(output) if returncode == 0 else None
+    return latency is not None, latency
+
+
 def settings_file():
     program = sys.executable if getattr(sys, "frozen", False) else __file__
     return Path(program).resolve().parent / "ping-monitor-settings.json"
@@ -221,6 +227,8 @@ class PingApp(tk.Tk):
         self.last_label.pack(fill="x", pady=(0, 8))
         self.elapsed_label = ttk.Label(outer)
         self.elapsed_label.pack(fill="x", pady=(0, 8))
+        self.progress = ttk.Progressbar(outer, maximum=100)
+        self.progress.pack(fill="x", pady=(0, 8))
         self.summary_label = ttk.Label(outer, font=("Segoe UI", 11, "bold"))
         self.summary_label.pack(fill="x", pady=(0, 10))
 
@@ -286,6 +294,7 @@ class PingApp(tk.Tk):
         self.elapsed_label.config(
             text=self.t("elapsed").format(elapsed, self.duration_limit)
         )
+        self.progress["value"] = min(100, 100 * elapsed / self.duration_limit)
         sent = len(self.results)
         received = sum(row[2] for row in self.results)
         times = [row[3] for row in self.results if row[3] is not None]
@@ -401,10 +410,8 @@ class PingApp(tk.Tk):
             return False, None
         finally:
             self.process = None
-        if process.returncode != 0:
-            return False, None
         text = output.decode(locale.getpreferredencoding(False), errors="replace")
-        return True, parse_latency(text)
+        return ping_result(process.returncode, text)
 
     def monitor(self, host, count, interval, timeout, duration):
         """后台循环：次数和持续时间，哪个先到就结束。"""
@@ -443,6 +450,7 @@ class PingApp(tk.Tk):
             return
         self.stop_event.set()
         self.status = "stopping"
+        self.stop_button.config(state="disabled")
         self.show_info()
         process = self.process
         if process is not None and process.poll() is None:
